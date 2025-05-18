@@ -1,15 +1,13 @@
-from typing import List, Optional
+from typing import Optional
 
 import torch
 from torch import Tensor
-from torch.nn import Parameter
 
 from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.nn.inits import glorot, ones
-from torch_geometric.typing import Adj, OptTensor, SparseTensor
-from torch_geometric.utils import spmm, scatter
+from torch_geometric.typing import Adj
+from torch_geometric.utils import scatter
 
 
 class AeroGNNConv(MessagePassing):
@@ -18,24 +16,24 @@ class AeroGNNConv(MessagePassing):
     Problems and Remedies" <https://arxiv.org/abs/2306.02376>`_ paper.
 
     .. math::
-        H^{(k)} = 
+        H^{(k)} =
         \begin{cases}
             \text{MLP}(X), & \text{if } k = 0, \\
             \mathcal{A}^{(k)} H^{(k-1)}, & \text{if } 1 \leq k \leq k_{max},
         \end{cases}
-        
+
         Z^{(k)} = \sum_{\ell=0}^{k} \Gamma^{(\ell)} H^{(\ell)}, \forall 1 \leq k \leq k_{max},
-        
+
         Z^* = \sigma(Z^{(k_{max})}) W^*,
-    
-    where 
+
+    where
     :math:`H^{(k)}` represents node features at layer :math:`k`,
     :math:`\mathcal{A}^{(k)}` is the edge attention matrix at layer :math:`k`,
     :math:`\Gamma^{(\ell)}` is the hop attention matrix,
     :math:`Z^*` is the final node representation,
     :math:`\sigma` is a non-linear activation function, and
     :math:`W^*` is an weight matrix.
-    
+
     Args:
         in_channels (int): Size of each input sample, or :obj:`-1` to derive
             the size from the first input(s) to the forward method.
@@ -57,7 +55,6 @@ class AeroGNNConv(MessagePassing):
         - **output:**
             - node features :math:`(|\mathcal{V}|, F_{out})`
     """
-
     def __init__(
         self,
         in_channels: int,
@@ -104,8 +101,7 @@ class AeroGNNConv(MessagePassing):
                 self.hid_channels_,
                 bias=True,
                 weight_initializer="glorot",
-            )
-        )
+            ))
         for _ in range(self.num_layers - 1):
             self.dense_lins.append(
                 Linear(
@@ -113,33 +109,32 @@ class AeroGNNConv(MessagePassing):
                     self.hid_channels_,
                     bias=True,
                     weight_initializer="glorot",
-                )
-            )
+                ))
         self.dense_lins.append(
             Linear(
                 self.hid_channels_,
                 self.out_channels,
                 bias=True,
                 weight_initializer="glorot",
-            )
-        )
+            ))
 
         for k in range(self.num_iters + 1):
             if k > 0:
                 self.atts.append(
-                    torch.nn.Parameter(torch.Tensor(1, self.num_heads, self.hid_channels))
-                )
+                    torch.nn.Parameter(
+                        torch.Tensor(1, self.num_heads, self.hid_channels)))
                 self.hop_atts.append(
                     torch.nn.Parameter(
-                        torch.Tensor(1, self.num_heads, self.hid_channels * 2)
-                    )
-                )
+                        torch.Tensor(1, self.num_heads,
+                                     self.hid_channels * 2)))
             else:
                 self.hop_atts.append(
-                    torch.nn.Parameter(torch.Tensor(1, self.num_heads, self.hid_channels))
-                )
-            self.hop_biases.append(torch.nn.Parameter(torch.Tensor(1, self.num_heads)))
-            self.decay_weights.append(torch.log((self.lambd / (k + 1)) + (1 + 1e-6)))
+                    torch.nn.Parameter(
+                        torch.Tensor(1, self.num_heads, self.hid_channels)))
+            self.hop_biases.append(
+                torch.nn.Parameter(torch.Tensor(1, self.num_heads)))
+            self.decay_weights.append(
+                torch.log((self.lambd / (k + 1)) + (1 + 1e-6)))
 
     def reset_parameters(self):
         for lin in self.dense_lins:
@@ -194,7 +189,8 @@ class AeroGNNConv(MessagePassing):
 
         return z_star
 
-    def hop_att_pred(self, h: Tensor, z_scale: Optional[Tensor] = None) -> Tensor:
+    def hop_att_pred(self, h: Tensor,
+                     z_scale: Optional[Tensor] = None) -> Tensor:
 
         if z_scale is None:
             x = h
@@ -207,9 +203,8 @@ class AeroGNNConv(MessagePassing):
 
         return g.unsqueeze(-1)
 
-    def edge_att_pred(
-        self, z_scale_i: Tensor, z_scale_j: Tensor, edge_index: Adj
-    ) -> Tensor:
+    def edge_att_pred(self, z_scale_i: Tensor, z_scale_j: Tensor,
+                      edge_index: Adj) -> Tensor:
 
         # edge attention (alpha_check_ij)
         a_ij = z_scale_i + z_scale_j
@@ -226,9 +221,8 @@ class AeroGNNConv(MessagePassing):
 
         return a_ij
 
-    def message(
-        self, edge_index: Adj, x_j: Tensor, z_scale_i: Tensor, z_scale_j: Tensor
-    ) -> Tensor:
+    def message(self, edge_index: Adj, x_j: Tensor, z_scale_i: Tensor,
+                z_scale_j: Tensor) -> Tensor:
         a = self.edge_att_pred(z_scale_i, z_scale_j, edge_index)
         return a.unsqueeze(-1) * x_j
 
@@ -237,5 +231,4 @@ class AeroGNNConv(MessagePassing):
             f"{self.__class__.__name__}({self.in_channels}, "
             f"{self.out_channels}, hid_channels={self.hid_channels}, "
             f"num_heads={self.num_heads}, num_iterations={self.num_iters}, "
-            f"dropout={self.dropout}, lambd={self.lambd})"
-        )
+            f"dropout={self.dropout}, lambd={self.lambd})")
