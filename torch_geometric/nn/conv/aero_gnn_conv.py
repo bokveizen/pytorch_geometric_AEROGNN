@@ -22,7 +22,8 @@ class AeroGNNConv(MessagePassing):
             \mathcal{A}^{(k)} H^{(k-1)}, & \text{if } 1 \leq k \leq k_{max},
         \end{cases}
 
-        Z^{(k)} = \sum_{\ell=0}^{k} \Gamma^{(\ell)} H^{(\ell)}, \forall 1 \leq k \leq k_{max},
+        Z^{(k)} = \sum_{\ell=0}^{k} \Gamma^{(\ell)} H^{(\ell)}, 
+        \forall 1 \leq k \leq k_{max},
 
         Z^* = \sigma(Z^{(k_{max})}) W^*,
 
@@ -150,10 +151,10 @@ class AeroGNNConv(MessagePassing):
         x = self.dropout_layer(x)
         x = self.dense_lins[0](x)
 
-        for l in range(self.num_layers - 1):
+        for i_layer in range(self.num_layers - 1):
             x = self.elu(x)
             x = self.dropout_layer(x)
-            x = self.dense_lins[l + 1](x)
+            x = self.dense_lins[i_layer + 1](x)
 
         return x
 
