@@ -22,7 +22,7 @@ class AeroGNNConv(MessagePassing):
             \mathcal{A}^{(k)} H^{(k-1)}, & \text{if } 1 \leq k \leq k_{max},
         \end{cases}
 
-        Z^{(k)} = \sum_{\ell=0}^{k} \Gamma^{(\ell)} H^{(\ell)}, 
+        Z^{(k)} = \sum_{\ell=0}^{k} \Gamma^{(\ell)} H^{(\ell)},
         \forall 1 \leq k \leq k_{max},
 
         Z^* = \sigma(Z^{(k_{max})}) W^*,
